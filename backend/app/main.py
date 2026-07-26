@@ -1,35 +1,58 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.routes import auth
+from app.db.client import prisma
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Connecting to database...")
+
+    await prisma.connect()
+
+    print("Database connected successfully!")
+
+    # Create default USER role if it does not exist
+    user_role = await prisma.roles.find_unique(
+        where={
+            "name": "USER",
+        }
+    )
+
+    if not user_role:
+        await prisma.roles.create(
+            data={
+                "name": "USER",
+            }
+        )
+
+        print("Default USER role created!")
+
+    yield
+
+    print("Disconnecting from database...")
+
+    await prisma.disconnect()
+
+    print("Database disconnected!")
 
 
 app = FastAPI(
     title="AI-Ready Customer Support API",
-    description="Backend API for the AI-ready customer support dashboard",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+app.include_router(
+    auth.router,
 )
-
-
-@app.get("/")
-async def root():
-    return {
-        "message": "AI-Ready Customer Support API is running"
-    }
 
 
 @app.get("/health")
 async def health_check():
     return {
-        "status": "I am healthy"
+        "status": "ok",
     }
