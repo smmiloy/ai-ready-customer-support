@@ -121,8 +121,8 @@ async def refresh_access_token(
     refresh_token: str,
 ):
     """
-    Generate a new access token using
-    a valid refresh token.
+    Generate new access and refresh tokens
+    using a valid refresh token.
     """
 
     try:
@@ -169,14 +169,14 @@ async def refresh_access_token(
             detail="Invalid user ID in token",
         )
 
-    token_hash = hash_refresh_token(
+    old_token_hash = hash_refresh_token(
         refresh_token,
     )
 
     stored_token = (
         await prisma.refresh_tokens.find_unique(
             where={
-                "token_hash": token_hash,
+                "token_hash": old_token_hash,
             }
         )
     )
@@ -220,7 +220,28 @@ async def refresh_access_token(
         user_id=user.id,
     )
 
+    new_refresh_token, expires_at = (
+        create_refresh_token(
+            user_id=user.id,
+        )
+    )
+
+    new_token_hash = hash_refresh_token(
+        new_refresh_token,
+    )
+
+    await prisma.refresh_tokens.update(
+        where={
+            "id": stored_token.id,
+        },
+        data={
+            "token_hash": new_token_hash,
+            "expires_at": expires_at,
+        },
+    )
+
     return {
         "access_token": access_token,
+        "refresh_token": new_refresh_token,
         "token_type": "bearer",
     }
