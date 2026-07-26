@@ -4,11 +4,14 @@ from app.schemas.auth import (
     LoginRequest,
     RegisterRequest,
     TokenResponse,
+    RefreshTokenRequest
+  
 )
 
 from app.services.auth_service import (
     login_user,
-    register_user,
+    register_user,  
+    refresh_access_token
 )
 
 
@@ -52,4 +55,15 @@ async def login(
     return await login_user(
         email=request.email,
         password=request.password,
+    )
+
+@router.post(
+    "/refresh",
+)
+async def refresh_token(
+    request: RefreshTokenRequest,
+):
+    print(request.refresh_token);  
+    return await refresh_access_token(
+        refresh_token=request.refresh_token,
     )

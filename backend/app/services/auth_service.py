@@ -1,4 +1,9 @@
+from datetime import datetime, timezone
+
+import jwt
 from fastapi import HTTPException, status
+
+from app.core.config import settings
 
 from app.core.security import (
     create_access_token,
@@ -108,5 +113,114 @@ async def login_user(
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
+        "token_type": "bearer",
+    }
+
+
+async def refresh_access_token(
+    refresh_token: str,
+):
+    """
+    Generate a new access token using
+    a valid refresh token.
+    """
+
+    try:
+        payload = jwt.decode(
+            refresh_token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[
+                settings.JWT_ALGORITHM
+            ],
+        )
+
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has expired",
+        )
+
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
+        )
+
+    if payload.get("type") != "refresh":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token type",
+        )
+
+    user_id = payload.get("sub")
+
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
+        )
+
+    try:
+        user_id = int(user_id)
+
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid user ID in token",
+        )
+
+    token_hash = hash_refresh_token(
+        refresh_token,
+    )
+
+    stored_token = (
+        await prisma.refresh_tokens.find_unique(
+            where={
+                "token_hash": token_hash,
+            }
+        )
+    )
+
+    if not stored_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=(
+                "Refresh token has been revoked "
+                "or does not exist"
+            ),
+        )
+
+    now = datetime.now(timezone.utc)
+
+    if stored_token.expires_at <= now:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has expired",
+        )
+
+    if stored_token.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
+        )
+
+    user = await prisma.users.find_unique(
+        where={
+            "id": user_id,
+        }
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User no longer exists",
+        )
+
+    access_token = create_access_token(
+        user_id=user.id,
+    )
+
+    return {
+        "access_token": access_token,
         "token_type": "bearer",
     }
