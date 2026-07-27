@@ -39,6 +39,9 @@ out/
 .DS_Store
 Thumbs.db
 
+# Kilo
+.kilo/
+
 # Logs
 *.log
 
