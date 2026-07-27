@@ -89,6 +89,7 @@ async def get_chat_messages(
         order={
             "created_at": "asc",
         },
+        include={"message_files": {"files": {}}},
     )
 
     total = await prisma.messages.count(

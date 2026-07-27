@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, Query, status
 
 from app.api.dependencies import get_current_user
-from app.schemas.file import FileAssociationRequest
+from app.schemas.file import FileAssociationRequest, FileResponse
 from app.schemas.message import (
     MessageCreate,
     MessageListResponse,
@@ -73,6 +73,21 @@ async def list_messages(
                 sender=message.sender,
                 content=message.content,
                 created_at=str(message.created_at),
+                files=[
+                    FileResponse(
+                        id=f.id,
+                        public_id=f.public_id,
+                        secure_url=f.secure_url,
+                        resource_type=f.resource_type,
+                        file_name=f.file_name,
+                        file_type=f.file_type,
+                        file_size=f.file_size,
+                        uploaded_by=f.uploaded_by,
+                        created_at=str(f.created_at),
+                    )
+                    for mf in (message.message_files or [])
+                    for f in [mf.files]
+                ],
             )
             for message in messages
         ],
