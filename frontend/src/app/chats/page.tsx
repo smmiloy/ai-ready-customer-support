@@ -36,7 +36,8 @@ export default function ChatsPage() {
             headers: { Authorization: `Bearer ${tokens.access_token}` },
           });
           if (retryRes.ok) {
-            setChats(await retryRes.json());
+            const data = await retryRes.json();
+            setChats(data.chats || []);
           } else {
             setError("Failed to load chats");
           }
@@ -44,7 +45,8 @@ export default function ChatsPage() {
           setError("Session expired. Please login again.");
         }
       } else if (response.ok) {
-        setChats(await response.json());
+        const data = await response.json();
+        setChats(data.chats || []);
       } else {
         setError("Failed to load chats");
       }
