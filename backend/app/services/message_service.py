@@ -89,7 +89,6 @@ async def get_chat_messages(
         order={
             "created_at": "asc",
         },
-        include={"message_files": {"files": {}}},
     )
 
     total = await prisma.messages.count(
@@ -98,7 +97,15 @@ async def get_chat_messages(
         }
     )
 
-    return messages, total
+    file_map: dict[str, list[dict]] = {}
+    for message in messages:
+        attachments = await prisma.message_files.find_many(
+            where={"message_id": message.id},
+            include={"files": {}},
+        )
+        file_map[message.id] = [att.files for att in attachments if att.files]
+
+    return messages, total, file_map
 
 
 async def attach_file_to_message(

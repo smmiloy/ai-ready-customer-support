@@ -58,7 +58,7 @@ async def list_messages(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=100),
 ):
-    messages, total = await get_chat_messages(
+    messages, total, file_map = await get_chat_messages(
         chat_id=chat_id,
         user_id=current_user.id,
         skip=skip,
@@ -85,8 +85,7 @@ async def list_messages(
                         uploaded_by=f.uploaded_by,
                         created_at=str(f.created_at),
                     )
-                    for mf in (message.message_files or [])
-                    for f in [mf.files]
+                    for f in file_map.get(message.id, [])
                 ],
             )
             for message in messages
