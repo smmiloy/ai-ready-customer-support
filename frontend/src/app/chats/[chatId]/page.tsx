@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { Chat, Message, FileAttachment } from "@/lib/api";
+import { Chat, Message, FileAttachment, updateChat, deleteChat } from "@/lib/api";
 import { uploadFile, attachFileToMessage } from "@/lib/api";
 
 export default function ChatDetailPage() {
@@ -21,8 +21,20 @@ export default function ChatDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<FileAttachment[]>([]);
   const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameTitle, setRenameTitle] = useState("");
+  const [renameLoading, setRenameLoading] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function showToast(message: string, type: "success" | "error") {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  }
 
   async function loadChat() {
     try {
@@ -217,6 +229,42 @@ export default function ChatDetailPage() {
     }
   }
 
+  async function handleRenameSave() {
+    if (!chat) return;
+    const title = renameTitle.trim() || undefined;
+    setRenameLoading(true);
+    setError("");
+    try {
+      await updateChat(accessToken!, refreshToken!, chat.id, title);
+      await loadChat();
+      showToast("Chat renamed successfully", "success");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to rename chat");
+      showToast(err instanceof Error ? err.message : "Failed to rename chat", "error");
+    } finally {
+      setRenameLoading(false);
+      setRenaming(false);
+      setRenameTitle("");
+    }
+  }
+
+  async function handleDelete() {
+    if (!chat) return;
+    setDeleteLoading(true);
+    setError("");
+    try {
+      await deleteChat(accessToken!, refreshToken!, chat.id);
+      showToast("Chat deleted successfully", "success");
+      router.push("/chats");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete chat");
+      showToast(err instanceof Error ? err.message : "Failed to delete chat", "error");
+    } finally {
+      setDeleteLoading(false);
+      setDeleteOpen(false);
+    }
+  }
+
   function formatFileSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -242,16 +290,87 @@ export default function ChatDetailPage() {
     );
   }
 
-return (
+  return (
     <div className="flex flex-col flex-1 bg-zinc-50 dark:bg-black">
       <div className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center gap-4">
           <Link href="/chats" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
             ← Back
           </Link>
-          <h1 className="font-medium truncate">
-            {chat.title || `Chat ${chat.id.slice(0, 8)}`}
-          </h1>
+          {renaming ? (
+            <div className="flex items-center gap-2 flex-1">
+              <input
+                type="text"
+                value={renameTitle}
+                onChange={(e) => setRenameTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleRenameSave();
+                  if (e.key === "Escape") {
+                    setRenaming(false);
+                    setRenameTitle("");
+                  }
+                }}
+                autoFocus
+                className="flex-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-1 text-sm"
+                placeholder="Chat title"
+                maxLength={200}
+              />
+              <button
+                onClick={handleRenameSave}
+                disabled={renameLoading}
+                className="rounded bg-foreground px-3 py-1 text-xs text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] disabled:opacity-50"
+              >
+                {renameLoading ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={() => {
+                  setRenaming(false);
+                  setRenameTitle("");
+                }}
+                className="rounded border border-zinc-300 dark:border-zinc-700 px-3 py-1 text-xs transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <>
+              <h1 className="font-medium truncate flex-1">
+                {chat.title || `Chat ${chat.id.slice(0, 8)}`}
+              </h1>
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  className="flex items-center justify-center w-8 h-8 rounded text-zinc-600 hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                  title="Chat options"
+                >
+                  ⚙️
+                </button>
+                {menuOpen && (
+                  <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg z-40 overflow-hidden">
+                    <button
+                      onClick={() => {
+                        setRenaming(true);
+                        setRenameTitle(chat.title || "");
+                        setMenuOpen(false);
+                      }}
+                      className="flex items-center gap-2 w-full px-4 py-2 text-sm text-left hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+                    >
+                      ✏️ Rename
+                    </button>
+                    <button
+                      onClick={() => {
+                        setDeleteOpen(true);
+                        setMenuOpen(false);
+                      }}
+                      className="flex items-center gap-2 w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -390,6 +509,51 @@ return (
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {deleteOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 cursor-pointer"
+          onClick={() => !deleteLoading && setDeleteOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-zinc-900 rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold mb-2">Delete Chat</h3>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+              Are you sure you want to delete this chat? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteOpen(false)}
+                disabled={deleteLoading}
+                className="rounded border border-zinc-300 dark:border-zinc-700 px-4 py-2 text-sm transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleteLoading}
+                className="rounded bg-red-600 px-4 py-2 text-sm text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteLoading ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div
+          className={`fixed top-4 right-4 z-50 rounded px-4 py-3 text-sm shadow-lg transition-all duration-300 ${
+            toast.type === "success"
+              ? "bg-green-600 text-white"
+              : "bg-red-600 text-white"
+          }`}
+        >
+          {toast.message}
         </div>
       )}
     </div>
