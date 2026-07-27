@@ -26,6 +26,19 @@ export interface Message {
   sender: string;
   content: string;
   created_at: string;
+  files?: FileAttachment[];
+}
+
+export interface FileAttachment {
+  id: string;
+  public_id: string;
+  secure_url: string;
+  resource_type: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  uploaded_by: number;
+  created_at: string;
 }
 
 function getHeaders(accessToken?: string): HeadersInit {
@@ -213,4 +226,81 @@ export async function deleteChat(
     throw new Error(error.detail || "Failed to delete chat");
   }
   return response.json();
+}
+
+export async function uploadFile(
+  accessToken: string,
+  refreshToken: string,
+  file: File,
+): Promise<FileAttachment> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  let response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/upload`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: formData,
+  });
+
+  if (response.status === 401 && refreshToken) {
+    const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    if (refreshRes.ok) {
+      const tokens = await refreshRes.json();
+      response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/upload`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${tokens.access_token}`,
+        },
+        body: formData,
+      });
+    }
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "File upload failed" }));
+    throw new Error(error.detail || "File upload failed");
+  }
+
+  const data = await response.json();
+  return {
+    id: data.id,
+    public_id: data.public_id,
+    secure_url: data.secure_url,
+    resource_type: data.resource_type,
+    file_name: data.file_name,
+    file_type: data.file_type,
+    file_size: data.file_size,
+    uploaded_by: data.uploaded_by,
+    created_at: data.created_at,
+  };
+}
+
+export async function attachFileToMessage(
+  accessToken: string,
+  refreshToken: string,
+  chatId: string,
+  messageId: string,
+  fileId: string,
+): Promise<void> {
+  const response = await apiRequest(
+    `/chats/${chatId}/messages/${messageId}/files`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_id: fileId }),
+    },
+    accessToken,
+    refreshToken,
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "Failed to attach file to message" }));
+    throw new Error(error.detail || "Failed to attach file to message");
+  }
 }

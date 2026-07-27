@@ -11,3 +11,7 @@ class FileResponse(BaseModel):
     file_size: int
     uploaded_by: int
     created_at: str
+
+
+class FileAssociationRequest(BaseModel):
+    file_id: str

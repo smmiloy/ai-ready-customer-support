@@ -3,12 +3,14 @@ import logging
 from fastapi import APIRouter, Depends, Query, status
 
 from app.api.dependencies import get_current_user
+from app.schemas.file import FileAssociationRequest
 from app.schemas.message import (
     MessageCreate,
     MessageListResponse,
     MessageResponse,
 )
 from app.services.message_service import (
+    attach_file_to_message,
     get_chat_messages,
     send_message,
 )
@@ -76,3 +78,23 @@ async def list_messages(
         ],
         total=total,
     )
+
+
+@router.post(
+    "/{chat_id}/messages/{message_id}/files",
+    status_code=status.HTTP_201_CREATED,
+)
+async def attach_file(
+    chat_id: str,
+    message_id: str,
+    request: FileAssociationRequest,
+    current_user=Depends(get_current_user),  # noqa: B008
+):
+    await attach_file_to_message(
+        user_id=current_user.id,
+        chat_id=chat_id,
+        message_id=message_id,
+        file_id=request.file_id,
+    )
+
+    return {"detail": "File attached to message"}

@@ -98,3 +98,58 @@ async def get_chat_messages(
     )
 
     return messages, total
+
+
+async def attach_file_to_message(
+    user_id: int,
+    chat_id: str,
+    message_id: str,
+    file_id: str,
+):
+    chat = await prisma.chats.find_unique(
+        where={
+            "id": chat_id,
+        }
+    )
+
+    if not chat or chat.user_id != user_id or chat.status != "ACTIVE":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chat not found",
+        )
+
+    message = await prisma.messages.find_unique(
+        where={
+            "id": message_id,
+        }
+    )
+
+    if not message or message.chat_id != chat_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Message not found",
+        )
+
+    existing = await prisma.message_files.find_unique(
+        where={
+            "message_id_file_id": {
+                "message_id": message_id,
+                "file_id": file_id,
+            }
+        }
+    )
+
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File already attached to this message",
+        )
+
+    await prisma.message_files.create(
+        data={
+            "message_id": message_id,
+            "file_id": file_id,
+        }
+    )
+
+    logger.info("File %s attached to message %s", file_id, message_id)
