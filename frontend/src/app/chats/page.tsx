@@ -68,14 +68,6 @@ export default function ChatsPage() {
     }
   }, [isAuthenticated, accessToken, refreshToken]);
 
-  if (loading || !isAuthenticated) {
-    return (
-      <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 dark:bg-black">
-        <p className="text-zinc-600 dark:text-zinc-400">Loading...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col flex-1 items-center bg-zinc-50 dark:bg-black py-8 px-4">
       <div className="w-full max-w-2xl">
