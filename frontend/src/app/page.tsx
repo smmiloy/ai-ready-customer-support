@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { AuthButtons } from "@/components/AuthButtons";
 
 export default function Home() {

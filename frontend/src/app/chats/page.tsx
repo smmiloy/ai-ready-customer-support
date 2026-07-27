@@ -7,23 +7,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Chat } from "@/lib/api";
 
 export default function ChatsPage() {
-  const { user, accessToken, refreshToken, isAuthenticated, loading } = useAuth();
+  const { accessToken, refreshToken, isAuthenticated, loading } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [error, setError] = useState("");
   const [loadingChats, setLoadingChats] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push("/login");
-    }
-  }, [isAuthenticated, loading, router]);
-
-  useEffect(() => {
-    if (isAuthenticated && accessToken) {
-      loadChats();
-    }
-  }, [isAuthenticated, accessToken, refreshToken]);
 
   async function loadChats() {
     setLoadingChats(true);
@@ -67,6 +55,19 @@ export default function ChatsPage() {
       setLoadingChats(false);
     }
   }
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push("/login");
+    }
+  }, [isAuthenticated, loading, router]);
+
+  useEffect(() => {
+    if (isAuthenticated && accessToken) {
+      const timeoutId = setTimeout(() => loadChats());
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isAuthenticated, accessToken, refreshToken]);
 
   if (loading || !isAuthenticated) {
     return (

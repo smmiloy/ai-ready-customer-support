@@ -10,7 +10,7 @@ export default function ChatDetailPage() {
   const params = useParams();
   const chatId = params.chatId as string;
   const router = useRouter();
-  const { accessToken, refreshToken, isAuthenticated, user, logout } = useAuth();
+  const { accessToken, refreshToken, isAuthenticated, logout } = useAuth();
   const [chat, setChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -18,25 +18,6 @@ export default function ChatDetailPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push("/login");
-    }
-  }, [isAuthenticated, loading, router]);
-
-  useEffect(() => {
-    if (isAuthenticated && accessToken) {
-      loadChat();
-      loadMessages();
-      const interval = setInterval(loadMessages, 3000);
-      return () => clearInterval(interval);
-    }
-  }, [isAuthenticated, accessToken, refreshToken, chatId]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
 
   async function loadChat() {
     try {
@@ -69,6 +50,30 @@ export default function ChatDetailPage() {
       // silent
     }
   }
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push("/login");
+    }
+  }, [isAuthenticated, loading, router]);
+
+  useEffect(() => {
+    if (isAuthenticated && accessToken) {
+      const timeoutId = setTimeout(() => {
+        loadChat();
+        loadMessages();
+      });
+      const interval = setInterval(loadMessages, 3000);
+      return () => {
+        clearTimeout(timeoutId);
+        clearInterval(interval);
+      };
+    }
+  }, [isAuthenticated, accessToken, refreshToken, chatId]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   async function handleSendMessage(e: React.FormEvent) {
     e.preventDefault();
