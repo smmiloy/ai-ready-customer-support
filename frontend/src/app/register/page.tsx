@@ -5,15 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { registerUser, loginUser } from "@/lib/api";
-
-interface RegisterResponse {
-  message: string;
-  user: {
-    id: number;
-    name: string;
-    email: string;
-  };
-}
+import { User } from "@/lib/api";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -30,9 +22,16 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const regResponse = await registerUser(name, email, password) as RegisterResponse;
+      await registerUser(name, email, password);
       const tokens = await loginUser(email, password);
-      login(tokens, regResponse.user);
+      const userRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/me`,
+        {
+          headers: { Authorization: `Bearer ${tokens.access_token}` },
+        }
+      );
+      const userData = userRes.ok ? await userRes.json() : { id: 0, name, email };
+      login(tokens, userData as User);
       router.push("/chats");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");

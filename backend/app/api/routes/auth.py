@@ -1,7 +1,8 @@
 import logging
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 
+from app.api.dependencies import get_current_user
 from app.schemas.auth import (
     LoginRequest,
     LogoutRequest,
@@ -88,3 +89,14 @@ async def logout(
     return await logout_user(
         refresh_token=request.refresh_token,
     )
+
+
+@router.get(
+    "/me",
+)
+async def me(current_user=Depends(get_current_user)):  # noqa: B008
+    return {
+        "id": current_user.id,
+        "name": current_user.name,
+        "email": current_user.email,
+    }

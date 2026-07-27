@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { loginUser } from "@/lib/api";
+import { User } from "@/lib/api";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -21,7 +22,14 @@ export default function LoginPage() {
 
     try {
       const tokens = await loginUser(email, password);
-      login(tokens, { id: 0, name: email.split("@")[0], email });
+      const userRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/me`,
+        {
+          headers: { Authorization: `Bearer ${tokens.access_token}` },
+        }
+      );
+      const userData = userRes.ok ? await userRes.json() : { id: 0, name: email.split("@")[0], email };
+      login(tokens, userData as User);
       router.push("/chats");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");

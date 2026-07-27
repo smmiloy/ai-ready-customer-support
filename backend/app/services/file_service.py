@@ -1,8 +1,8 @@
 import logging
 import uuid
 
-import cloudinary  # type: ignore[import-not-found]
-import cloudinary.uploader  # type: ignore[import-not-found]
+import cloudinary  # type: ignore[import-not-found, import-untyped]
+import cloudinary.uploader  # type: ignore[import-not-found, import-untyped]
 from fastapi import HTTPException, status
 from fastapi.datastructures import UploadFile
 
