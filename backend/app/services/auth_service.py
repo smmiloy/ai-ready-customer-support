@@ -5,7 +5,6 @@ import jwt
 from fastapi import HTTPException, status
 
 from app.core.config import settings
-
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -13,7 +12,6 @@ from app.core.security import (
     hash_refresh_token,
     verify_password,
 )
-
 from app.db.client import prisma
 
 logger = logging.getLogger(__name__)
@@ -149,13 +147,13 @@ async def refresh_access_token(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token has expired",
-        )
+        ) from None
 
     except jwt.InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
-        )
+        ) from None
 
     if payload.get("type") != "refresh":
         raise HTTPException(
@@ -178,7 +176,7 @@ async def refresh_access_token(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid user ID in token",
-        )
+        ) from None
 
     old_token_hash = hash_refresh_token(
         refresh_token,

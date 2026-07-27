@@ -1,8 +1,8 @@
-import pytest
 import pytest_asyncio
 from httpx import AsyncClient
-from app.main import app
+
 from app.db.client import prisma
+from app.main import app
 
 
 @pytest_asyncio.fixture(scope="session")

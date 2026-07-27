@@ -5,16 +5,15 @@ from fastapi import APIRouter, status
 from app.schemas.auth import (
     LoginRequest,
     LogoutRequest,
+    RefreshTokenRequest,
     RegisterRequest,
     TokenResponse,
-    RefreshTokenRequest,
 )
-
 from app.services.auth_service import (
     login_user,
     logout_user,
-    register_user,
     refresh_access_token,
+    register_user,
 )
 
 logger = logging.getLogger(__name__)
@@ -33,6 +32,8 @@ router = APIRouter(
 async def register(
     request: RegisterRequest,
 ):
+    request.validate_password()
+
     user = await register_user(
         name=request.name,
         email=request.email,

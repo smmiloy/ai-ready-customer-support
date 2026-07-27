@@ -46,7 +46,7 @@ model users {
   password_hash  String           @db.VarChar(255)
   role_id        Int
   created_at     DateTime         @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime         @default(now()) @updatedAt @db.Timestamptz(6)
   files          uploaded_files[]
   refresh_tokens refresh_tokens[]
   roles          roles            @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_role")
