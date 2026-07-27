@@ -43,7 +43,7 @@ async def create(
         id=chat.id,
         user_id=chat.user_id,
         title=chat.title,
-        status=chat.status,
+        status=str(chat.status),
         created_at=str(chat.created_at),
     )
 
@@ -69,7 +69,7 @@ async def list_all(
                 id=chat.id,
                 user_id=chat.user_id,
                 title=chat.title,
-                status=chat.status,
+                status=str(chat.status),
                 created_at=str(chat.created_at),
             )
             for chat in chats
@@ -95,7 +95,7 @@ async def get(
         id=chat.id,
         user_id=chat.user_id,
         title=chat.title,
-        status=chat.status,
+        status=str(chat.status),
         created_at=str(chat.created_at),
     )
 
@@ -119,7 +119,7 @@ async def update(
         id=chat.id,
         user_id=chat.user_id,
         title=chat.title,
-        status=chat.status,
+        status=str(chat.status),
         created_at=str(chat.created_at),
     )
 
