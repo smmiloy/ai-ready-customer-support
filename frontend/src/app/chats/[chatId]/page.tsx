@@ -56,6 +56,8 @@ export default function ChatDetailPage() {
       }
     } catch {
       setError("Failed to load chat");
+    } finally {
+      setLoading(false);
     }
   }
 
