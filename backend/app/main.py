@@ -64,10 +64,10 @@ app.include_router(
     chat.router,
 )
 
-<<<<<<< HEAD
 app.include_router(
     message.router,
 )
+
 
 @app.get("/health")
 async def health_check():
