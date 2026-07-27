@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, chat
+from app.api.routes import auth, chat, message
 from app.db.client import prisma
 
 logger = logging.getLogger(__name__)
@@ -62,6 +62,10 @@ app.include_router(
 
 app.include_router(
     chat.router,
+)
+
+app.include_router(
+    message.router,
 )
 
 
