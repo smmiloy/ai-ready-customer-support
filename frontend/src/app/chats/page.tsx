@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Chat } from "@/lib/api";
 
 export default function ChatsPage() {
-  const { accessToken, refreshToken, isAuthenticated, loading } = useAuth();
+  const { accessToken, refreshToken, isAuthenticated, loading, updateTokens } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [error, setError] = useState("");
   const [loadingChats, setLoadingChats] = useState(false);
@@ -31,10 +31,9 @@ export default function ChatsPage() {
 
         if (refreshRes.ok) {
           const tokens = await refreshRes.json();
-          // Note: in a real app, you'd call updateTokens here
-          const newAccessToken = tokens.access_token;
+          updateTokens(tokens);
           const retryRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chats/`, {
-            headers: { Authorization: `Bearer ${newAccessToken}` },
+            headers: { Authorization: `Bearer ${tokens.access_token}` },
           });
           if (retryRes.ok) {
             setChats(await retryRes.json());

@@ -10,7 +10,7 @@ export default function ChatDetailPage() {
   const params = useParams();
   const chatId = params.chatId as string;
   const router = useRouter();
-  const { accessToken, refreshToken, isAuthenticated, logout } = useAuth();
+  const { accessToken, refreshToken, isAuthenticated, logout, updateTokens } = useAuth();
   const [chat, setChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -28,6 +28,27 @@ export default function ChatDetailPage() {
         setChat(await res.json());
       } else if (res.status === 404) {
         router.push("/chats");
+      } else if (res.status === 401 && refreshToken) {
+        const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+        if (refreshRes.ok) {
+          const tokens = await refreshRes.json();
+          updateTokens(tokens);
+          const retryRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chats/${chatId}`, {
+            headers: { Authorization: `Bearer ${tokens.access_token}` },
+          });
+          if (retryRes.ok) {
+            setChat(await retryRes.json());
+          } else {
+            setError("Failed to load chat");
+          }
+        } else {
+          await logout();
+          router.push("/login");
+        }
       }
     } catch {
       setError("Failed to load chat");
@@ -45,6 +66,26 @@ export default function ChatDetailPage() {
       if (res.ok) {
         const data = await res.json();
         setMessages(data.messages || []);
+      } else if (res.status === 401 && refreshToken) {
+        const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+        if (refreshRes.ok) {
+          const tokens = await refreshRes.json();
+          updateTokens(tokens);
+          const retryRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chats/${chatId}/messages`, {
+            headers: { Authorization: `Bearer ${tokens.access_token}` },
+          });
+          if (retryRes.ok) {
+            const data = await retryRes.json();
+            setMessages(data.messages || []);
+          }
+        } else {
+          await logout();
+          router.push("/login");
+        }
       }
     } catch {
       // silent
@@ -104,7 +145,7 @@ export default function ChatDetailPage() {
 
         if (refreshRes.ok) {
           const tokens = await refreshRes.json();
-          // In a real app, call updateTokens here
+          updateTokens(tokens);
           const retryRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chats/${chatId}/messages`, {
             method: "POST",
             headers: {
