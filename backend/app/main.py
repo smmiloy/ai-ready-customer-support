@@ -1,20 +1,24 @@
+import logging
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import auth
 from app.db.client import prisma
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Connecting to database...")
+    logger.info("Connecting to database...")
 
     await prisma.connect()
 
-    print("Database connected successfully!")
+    logger.info("Database connected successfully!")
 
-    # Create default USER role if it does not exist
     user_role = await prisma.roles.find_unique(
         where={
             "name": "USER",
@@ -28,21 +32,29 @@ async def lifespan(app: FastAPI):
             }
         )
 
-        print("Default USER role created!")
+        logger.info("Default USER role created!")
 
     yield
 
-    print("Disconnecting from database...")
+    logger.info("Disconnecting from database...")
 
     await prisma.disconnect()
 
-    print("Database disconnected!")
+    logger.info("Database disconnected!")
 
 
 app = FastAPI(
     title="AI-Ready Customer Support API",
     version="1.0.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

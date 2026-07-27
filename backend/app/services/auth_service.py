@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 import jwt
@@ -15,6 +16,8 @@ from app.core.security import (
 
 from app.db.client import prisma
 
+logger = logging.getLogger(__name__)
+
 
 async def register_user(
     name: str,
@@ -22,6 +25,8 @@ async def register_user(
     password: str,
 ):
     email = email.lower().strip()
+
+    logger.info("Registering user with email: %s", email)
 
     existing_user = await prisma.users.find_unique(
         where={
@@ -58,6 +63,8 @@ async def register_user(
         }
     )
 
+    logger.info("User registered successfully with id: %s", user.id)
+
     return user
 
 
@@ -66,6 +73,8 @@ async def login_user(
     password: str,
 ):
     email = email.lower().strip()
+
+    logger.info("Login attempt for email: %s", email)
 
     user = await prisma.users.find_unique(
         where={
@@ -109,6 +118,8 @@ async def login_user(
             "expires_at": expires_at,
         }
     )
+
+    logger.info("Login successful for user id: %s", user.id)
 
     return {
         "access_token": access_token,
@@ -240,8 +251,48 @@ async def refresh_access_token(
         },
     )
 
+    logger.info(
+        "Access token refreshed for user id: %s", user.id
+    )
+
     return {
         "access_token": access_token,
         "refresh_token": new_refresh_token,
         "token_type": "bearer",
+    }
+
+
+async def logout_user(
+    refresh_token: str,
+):
+    """
+    Invalidate a refresh token by deleting it
+    from the database.
+    """
+
+    token_hash = hash_refresh_token(
+        refresh_token,
+    )
+
+    stored_token = (
+        await prisma.refresh_tokens.find_unique(
+            where={
+                "token_hash": token_hash,
+            }
+        )
+    )
+
+    if stored_token:
+        await prisma.refresh_tokens.delete(
+            where={
+                "id": stored_token.id,
+            }
+        )
+        logger.info(
+            "Refresh token invalidated for user id: %s",
+            stored_token.user_id,
+        )
+
+    return {
+        "message": "Logged out successfully",
     }

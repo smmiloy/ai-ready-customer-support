@@ -1,4 +1,5 @@
 import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -38,17 +39,17 @@ def create_access_token(
     Create a short-lived access token.
     """
 
-    expires_at = (
-        datetime.now(timezone.utc)
-        + timedelta(
-            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
     payload = {
         "sub": str(user_id),
         "type": "access",
+        "iat": now,
         "exp": expires_at,
+        "jti": secrets.token_urlsafe(32),
     }
 
     return jwt.encode(
@@ -65,17 +66,17 @@ def create_refresh_token(
     Create a long-lived refresh token.
     """
 
-    expires_at = (
-        datetime.now(timezone.utc)
-        + timedelta(
-            days=settings.REFRESH_TOKEN_EXPIRE_DAYS
-        )
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(
+        days=settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
 
     payload = {
         "sub": str(user_id),
         "type": "refresh",
+        "iat": now,
         "exp": expires_at,
+        "jti": secrets.token_urlsafe(32),
     }
 
     token = jwt.encode(

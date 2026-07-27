@@ -1,18 +1,23 @@
+import logging
+
 from fastapi import APIRouter, status
 
 from app.schemas.auth import (
     LoginRequest,
+    LogoutRequest,
     RegisterRequest,
     TokenResponse,
-    RefreshTokenRequest
-  
+    RefreshTokenRequest,
 )
 
 from app.services.auth_service import (
     login_user,
-    register_user,  
-    refresh_access_token
+    logout_user,
+    register_user,
+    refresh_access_token,
 )
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(
@@ -33,7 +38,12 @@ async def register(
         email=request.email,
         password=request.password,
     )
-    print(request.name,request.email,request.password)
+
+    logger.info(
+        "User registered: name=%s, email=%s",
+        request.name,
+        request.email,
+    )
 
     return {
         "message": "User registered successfully",
@@ -63,7 +73,17 @@ async def login(
 async def refresh_token(
     request: RefreshTokenRequest,
 ):
-    print(request.refresh_token);  
     return await refresh_access_token(
+        refresh_token=request.refresh_token,
+    )
+
+
+@router.post(
+    "/logout",
+)
+async def logout(
+    request: LogoutRequest,
+):
+    return await logout_user(
         refresh_token=request.refresh_token,
     )

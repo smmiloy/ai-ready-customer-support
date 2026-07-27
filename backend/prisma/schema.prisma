@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model files {
+model uploaded_files {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   public_id     String   @unique @db.VarChar(255)
   secure_url    String
@@ -18,6 +18,8 @@ model files {
   uploaded_by   Int
   created_at    DateTime @default(now()) @db.Timestamptz(6)
   users         users    @relation(fields: [uploaded_by], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_file_user")
+
+  @@index([uploaded_by], map: "idx_file_user")
 }
 
 model refresh_tokens {
@@ -27,6 +29,8 @@ model refresh_tokens {
   expires_at DateTime @db.Timestamptz(6)
   created_at DateTime @default(now()) @db.Timestamptz(6)
   users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_refresh_token_user")
+
+  @@index([user_id], map: "idx_refresh_token_user")
 }
 
 model roles {
@@ -43,7 +47,10 @@ model users {
   role_id        Int
   created_at     DateTime         @default(now()) @db.Timestamptz(6)
   updated_at     DateTime         @default(now()) @db.Timestamptz(6)
-  files          files[]
+  files          uploaded_files[]
   refresh_tokens refresh_tokens[]
   roles          roles            @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_role")
+
+  @@index([email], map: "idx_user_email")
+  @@index([role_id], map: "idx_user_role")
 }
